@@ -42,7 +42,7 @@ const  placeOrder = async (req, res) => {
         method: "post",
         url: "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/placeOrder",
         headers: {
-          "Authorization": AUTH_TOKEN,
+          "Authorization": `Bearer ${AUTH_TOKEN}`,
           "Content-Type": "application/json",
           "Accept": "application/json",
           "X-UserType": "USER",
@@ -83,7 +83,7 @@ const modifyOrder = async (req, res) => {
       var clientCode = account.clientCode;
       console.log("clientcode ", clientCode);
 
-      const PrivateKey = account.privateKey;
+      const PrivateKey = account.apiKey;
 
       var data = JSON.stringify({
         
@@ -106,7 +106,7 @@ const modifyOrder = async (req, res) => {
         method: "post",
         url: "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/placeOrder",
         headers: {
-          "Authorization": AUTH_TOKEN,
+          "Authorization": `Bearer ${AUTH_TOKEN}`,
           "Content-Type": "application/json",
           "Accept": "application/json",
           "X-UserType": "USER",
@@ -148,7 +148,7 @@ const cancelOrder=  async (req, res) => {
         var clientCode = account.clientCode;
         console.log("clientcode ", clientCode);
   
-        const PrivateKey = account.privateKey;
+        const PrivateKey = account.apiKey;
   
         var data = JSON.stringify({
          "variety":  reqData.variety,
@@ -159,7 +159,7 @@ const cancelOrder=  async (req, res) => {
           method: "post",
           url: "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/cancelOrder",
           headers: {
-            "Authorization": AUTH_TOKEN,
+            "Authorization": `Bearer ${AUTH_TOKEN}`,
             "Content-Type": "application/json",
             "Accept": "application/json",
             "X-UserType": "USER",
