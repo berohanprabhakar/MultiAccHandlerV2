@@ -4,7 +4,6 @@ const { getLocalIP, getMacAddress } = require("../middlewares/systemdetails");
 const { Accounts } = require("../models/accounts");
 const { updateAccountTokens } = require("../controllers/accountController");
 
-
 //old
 // const login = async (req, res) => {
 //   const Account = await Accounts.find({});
@@ -19,7 +18,7 @@ const { updateAccountTokens } = require("../controllers/accountController");
 
 //       var cc = account.clientCode;
 //       console.log("clientcode ",cc);
-    
+
 //       const password = account.password;
 //       const TOTP = await generateTOTP(account.totpKey);
 //       const PrivateKey = account.apiKey;
@@ -51,7 +50,7 @@ const { updateAccountTokens } = require("../controllers/accountController");
 //       axios(config)
 //         .then( async (response) => {
 //           console.log(response.data);
-          
+
 //           // // updating token details after login
 //           const tokenUpdate = await updateAccountTokens(
 //             account.clientCode,
@@ -76,10 +75,11 @@ const { updateAccountTokens } = require("../controllers/accountController");
 // };
 
 // new
+
 const login = async (req, res) => {
   try {
     const accounts = await Accounts.find({});
-    console.log(accounts);
+    // console.log(accounts);
 
     const results = await Promise.all(
       accounts.map(async (account) => {
@@ -90,7 +90,7 @@ const login = async (req, res) => {
           const macAddress = getMacAddress();
 
           const clientCode = account.clientCode;
-          console.log("clientcode ", clientCode);
+          // console.log("clientcode ", clientCode);
 
           const password = account.password;
           const TOTP = await generateTOTP(account.totpKey);
@@ -131,23 +131,87 @@ const login = async (req, res) => {
           );
           console.log(`Updated tokens of:${clientCode}`);
 
-          return { success: true, clientCode, };
+          return { success: true, clientCode };
         } catch (error) {
           console.error(
             `Error in login Api at Account: ${account.clientCode}`,
             error.message
           );
-          return { success: false, clientCode: account.clientCode};
+          return { success: false, clientCode: account.clientCode };
         }
       })
     );
 
     // Send the results
-    return res.status(201).json({ message: "Login and token update process completed", results });
+    return res
+      .status(201)
+      .json({ message: "Login and token update process completed", results });
   } catch (error) {
-    console.error("Error fetching accounts or processing login:", error.message);
-    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+    console.error(
+      "Error fetching accounts or processing login:",
+      error.message
+    );
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
 
-module.exports = { login };
+const getProfile = async (req, res) => {
+  const Account = await Accounts.find({});
+  // console.log(Account);
+
+  const results = await Promise.all(
+    Account.map(async (account) => {
+      try {
+        const pip = await axios.get("https://api64.ipify.org?format=json");
+        const Pip = pip.data.ip;
+        const localIP = getLocalIP();
+        const macAddress = getMacAddress();
+
+        var clientCode = account.clientCode;
+        // console.log("clientcode ", clientCode);
+        const PrivateKey = account.apiKey;
+        const AUTH_TOKEN = account.jwtToken;
+
+        var data = JSON.stringify({
+          clientcode: clientCode,
+        });
+
+        var config = {
+          method: "get",
+          url: "https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getProfile",
+
+          headers: {
+            Authorization: `Bearer ${AUTH_TOKEN}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "X-UserType": "USER",
+            "X-SourceID": "WEB",
+            "X-ClientLocalIP": localIP,
+            "X-ClientPublicIP": Pip,
+            "X-MACAddress": macAddress,
+            "X-PrivateKey": PrivateKey,
+          },
+        };
+
+        axios(config)
+          .then(function (response) {
+            // console.log(response.data);
+            console.log(`Got data success in ${clientCode}..`);
+            res.send(response.data);
+          })
+          .catch(function (error) {
+            console.log(error);
+          });
+      } catch (error) {
+        console.error(
+          `Error in GetProfile Api at Account : ${account.clientCode}`,
+          error.message
+        );
+      }
+    })
+  );
+};
+
+module.exports = { login, getProfile };
