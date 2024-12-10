@@ -5,7 +5,7 @@ const router = express.Router();
 const {addNewAccount} = require("../controllers/accountController");
 const { login, getProfile } = require("../auth/login");
 const { logout } = require("../auth/logout");
-const { getTokens } = require("../instruments/getToken");
+const { getTokens } = require("../middlewares/getToken");
 const { placeOrder } = require("../controllers/orderController");
 
 

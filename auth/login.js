@@ -160,7 +160,6 @@ const login = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const accounts = await Accounts.find({});
-    // console.log(accounts);
 
     const results = await Promise.all(
       accounts.map(async (account) => {
@@ -172,6 +171,7 @@ const getProfile = async (req, res) => {
 
           const clientCode = account.clientCode;
           const PrivateKey = account.apiKey;
+          const AUTH_TOKEN = account.jwtToken;
 
 
           var config = {
@@ -179,9 +179,9 @@ const getProfile = async (req, res) => {
             url: "https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getProfile",
   
             headers: {
-              Authorization: `Bearer ${AUTH_TOKEN}`,
+              "Authorization": `Bearer ${AUTH_TOKEN}`,
               "Content-Type": "application/json",
-              Accept: "application/json",
+              "Accept": "application/json",
               "X-UserType": "USER",
               "X-SourceID": "WEB",
               "X-ClientLocalIP": localIP,
@@ -193,21 +193,15 @@ const getProfile = async (req, res) => {
 
           const response = await axios(config);
           // console.log(response.data);
-          console.log(`login success in ${clientCode}..`);
+          console.log(`getProfile success in ${clientCode}..`);
+          const profilData = response.data;
+          console.log(profilData);
 
-          // Update token details after login
-          const tokenUpdate = await updateAccountTokens(
-            account.clientCode,
-            response.data.data.jwtToken,
-            response.data.data.refreshToken,
-            response.data.data.feedToken
-          );
-          console.log(`Updated tokens of:${clientCode}`);
+          return { success: true, profilData };
 
-          return { success: true, clientCode };
         } catch (error) {
           console.error(
-            `Error in login Api at Account: ${account.clientCode}`,
+            `Error in getting profle at Account: ${account.clientCode}`,
             error.message
           );
           return { success: false, clientCode: account.clientCode };
@@ -218,7 +212,7 @@ const getProfile = async (req, res) => {
     // Send the results
     return res
       .status(201)
-      .json({ message: "Login and token update process completed", results });
+      .json({ message: "Getting all the profile success", results });
   } catch (error) {
     console.error(
       "Error fetching accounts or processing login:",
