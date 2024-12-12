@@ -10,6 +10,12 @@ const AccountSchema = new mongoose.Schema({
   feedToken: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+  orders: [
+   {
+    name : {String},
+    u_id: {String},
+   }],
+   
 });
 
 const Accounts = mongoose.model('Accounts', AccountSchema);
