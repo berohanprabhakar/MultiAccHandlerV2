@@ -37,7 +37,6 @@ const addNewAccount = async (req, res) => {
   }
 };
 
-
 // Function to update account tokens
 const updateAccountTokens = async (clientCode, jwtToken, refreshToken, feedToken) => {
   try {

@@ -117,6 +117,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 //   });
 // };
 
+
 const placeOrder = async (req, res) => {
   try {
     const Account = await Accounts.find({});
@@ -451,4 +452,133 @@ const cancelOrder = async (req, res) => {
   }
 };
 
-module.exports = { placeOrder, modifyOrder, cancelOrder };
+const exitOrder = async (req, res) => {
+  try {
+    const Account = await Accounts.find({});
+    const reqData = req.body;
+
+    // Get token and symbol
+    const response = await Tokens.find({ symbol: reqData.symbol });
+    const TokenData = response[0];
+    const lotsize = TokenData.lotsize;
+    const qt = lotsize * reqData.lots;
+    // console.log(TokenData);
+
+    // Function to get the required data for each account
+    const promises = Account.map(async (account) => {
+      try {
+        // Fetching IP and other details
+        const pip = await axios.get("https://api64.ipify.org?format=json");
+        const Pip = pip.data.ip;
+        const localIP = getLocalIP();
+        const macAddress = getMacAddress();
+        const AUTH_TOKEN = account.jwtToken;
+
+        // get accound details here from the order unique id
+        // find the unique order id by searching in the accounts order array by combinig two things
+        const odr_data = account.findOne((orders.name = req.data.name));
+        const uorder_id = odr_data.u_id;
+
+        // fetch order details via order id and then populate in the modify order field this is done in the frontend part
+
+        var orderHead = {
+          method: "get",
+          url: `https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/details/${uorder_id}`,
+          headers: {
+            "X-PrivateKey": `Bearer ${AUTH_TOKEN}`,
+            "Accept": "application/json, application/json",
+            "Content-Type": "application/json",
+            "X-SourceID": "WEB, WEB",
+            "X-UserType": "USER",
+            "X-ClientLocalIP": localIP,
+            "X-ClientPublicIP": Pip,
+            "X-MACAddress": macAddress,
+            "X-PrivateKey": account.apiKey,
+          },
+        };
+        const orderData = await axios(orderHead);
+
+        let transaction = 'SELL'
+        // TANSACTION TYPE
+        if(orderData.data.transactiontype === 'SELL'){
+          transaction =  'BUY'
+        }
+
+
+        // this data is for the order
+        const data = JSON.stringify({
+
+          variety: orderData.data.variety, // normal or stop loss
+          tradingsymbol: TokenData.symbol, // name of index
+          symboltoken: TokenData.token,
+          exchange: TokenData.exch_seg, // bse, nse, nfo
+          orderid: orderData.data.orderid, // order id
+          ordertype: "MARKET", // mkt or limit
+          transactiontype: transaction, // buy or sale
+          producttype: orderData.data.producttype, // cf or intraday
+          duration: orderData.data.duration, // ioc or day
+      // TODO : check for price and quantity as lot quantitiy may be differe and the req price may be change
+          // price: reqData.price, // price
+          quantity: orderData.data.quantity, // lot
+
+        });
+
+        const config = {
+          method: "post",
+          url: "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/placeOrder",
+          headers: {
+            Authorization: `Bearer ${AUTH_TOKEN}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "X-UserType": "USER",
+            "X-SourceID": "WEB",
+            "X-ClientLocalIP": localIP,
+            "X-ClientPublicIP": Pip,
+            "X-MACAddress": macAddress,
+            "X-PrivateKey": account.apiKey,
+          },
+          data: data,
+        };
+
+        // Execute the API call
+        const response = await axios(config);
+
+        //update the order name and u_id into account
+        await account.deleteOne({
+          orders: {
+            name: response.data.script,
+            u_id: response.data.uniqueorderid,
+          },
+        });
+
+        console.log(
+          `Success for clientCode ${account.clientCode}:`,
+          response.data
+        );
+        return {
+          success: true,
+          clientCode: account.clientCode,
+          data: response.data,
+        };
+      } catch (error) {
+        console.error(
+          `Error for clientCode ${account.clientCode}:`,
+          error.message
+        );
+        return {
+          success: false,
+          clientCode: account.clientCode,
+          error: error.message,
+        };
+      }
+    });
+
+    // Wait for all promises to resolve
+    const results = await Promise.all(promises);
+    res.status(200).json({ results });
+  } catch (error) {
+    console.error("Error in placeOrder:", error.message);
+    res.status(500).send("Internal Server Error");
+  }
+};
+module.exports = { placeOrder, modifyOrder, cancelOrder, exitOrder };
