@@ -1,10 +1,13 @@
 const express = require("express");
 const connectDB = require("./db/dbconfig");
-const {addNewAccount} = require("./controllers/accountController");
 const bodyParser = require("body-parser");
+const dotenv = require("dotenv");
+dotenv.config();
+
+const PORT = process.env.PORT || 3000;
 
 const app = express();
-const router = express.Router();
+
 app.use(bodyParser.json()) // for parsing application/json
 app.use(bodyParser.urlencoded({ extended: true }))
 
@@ -20,5 +23,5 @@ app.use("/api", accountRoute);
 // app.get('/login', login);
 
 app.listen(3000, () => {
-  console.log(`Server listening on http://localhost:${3000}`);
+  console.log(`Server listening on http://localhost:${PORT}`);
 });

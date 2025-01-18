@@ -6,7 +6,7 @@ const {addNewAccount} = require("../controllers/accountController");
 const { login, getProfile } = require("../auth/login");
 const { logout } = require("../auth/logout");
 const { getTokens } = require("../middlewares/getToken");
-const { placeOrder, exitOrder, modifyOrder, cancelOrder } = require("../controllers/orderController");
+const { placeOrder, exitOrder, modifyOrder, cancelOrder, orderStatus } = require("../controllers/orderController");
 
 
 router.post("/addAccount", addNewAccount);
@@ -18,5 +18,6 @@ router.post("/placeOrder", placeOrder);
 router.post("/exitOrder", exitOrder); // TODO : these three are post routes because i have to give name of index via req.body , change it
 router.post("/modifyOrder", modifyOrder);
 router.post("/cancelOrder", cancelOrder);
+router.get("/orderStatus", orderStatus);
 
 module.exports = router;

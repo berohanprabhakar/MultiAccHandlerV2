@@ -25,6 +25,11 @@ const getTokens = async function (req, res) {
             tick_size: item.tick_size,
         }));
 
+        // Step 4: Delete all existing tokens from the database
+        await Tokens.deleteMany({});
+        console.log("All existing tokens deleted");
+
+        // Step 5: Insert new tokens into the database
         await Tokens.insertMany(tokensArray);
         console.log("Tokens saved:", tokensArray.length);
         return res.json({ message: `${tokensArray.length} tokens saved successfully` });

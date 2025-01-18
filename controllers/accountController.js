@@ -7,9 +7,10 @@ app.use(bodyParser.urlencoded({ extended: true }))
 
 const addNewAccount = async (req, res) => {
   try {
-    const { clientCode, password, totpKey, apiKey } = req.body;
+    const { clientName, clientCode, password, totpKey, apiKey } = req.body;
     console.log(req.body);
 
+    // Check if account already exists
     const isPresent = await Accounts.findOne({ clientCode });
     if (isPresent) {
       console.log(`Account with clientCode ${clientCode} found. Updating.`);
@@ -22,7 +23,10 @@ const addNewAccount = async (req, res) => {
     }
 
     console.log(`No account with clientCode ${clientCode} found. Creating new.`);
+
+    // Create new account
     const newAccount = new Accounts({
+      clientName,
       clientCode,
       password,
       totpKey,

@@ -1,6 +1,8 @@
 var axios = require("axios");
 const { Accounts } = require("../models/accounts");
 const { Tokens } = require("../models/tokensmap");
+const { Openorders } = require('../models/openorders');
+const { Placedorders } = require('../models/placedorder')
 const { getLocalIP, getMacAddress } = require("../middlewares/systemdetails");
 const express = require("express");
 const app = express();
@@ -130,6 +132,9 @@ const placeOrder = async (req, res) => {
     const qt = lotsize * reqData.lots;
     // console.log(TokenData);
 
+    // variable to map into openorder and placeorder database
+
+
     // Function to get the required data for each account
     const promises = Account.map(async (account) => {
       try {
@@ -175,18 +180,27 @@ const placeOrder = async (req, res) => {
         // Execute the API call
         const response = await axios(config);
 
-        //update the order name and u_id into account
-        await account.updateOne({
-          orders: {
-            name: response.data.script,
-            u_id: response.data.uniqueorderid,
-          },
-        });
+        // //update the order name and u_id into account
+        // await account.updateOne({
+        //   orders: {
+        //     name: response.data.script,
+        //     u_id: response.data.uniqueorderid,
+        //   },
+        // });
 
         console.log(
           `Success for clientCode ${account.clientCode}:`,
           response.data
         );
+
+        // update in open orders schema
+        // if order is limit then only it will go in the open orders
+        if(reqData.ordertype === 'LIMIT'){
+          await Openorders.updateOne({
+            ListId: []
+          })
+        }
+
         return {
           success: true,
           clientCode: account.clientCode,
@@ -299,7 +313,7 @@ const modifyOrder = async (req, res) => {
             response.data
           );
           return {
-            success: false,
+            success: true,
             clientCode: account.clientCode,
             data: response.data,
           };
@@ -308,7 +322,7 @@ const modifyOrder = async (req, res) => {
         // update order id into my account schema
 
         return {
-          success: true,
+          success: false,
           clientCode: account.clientCode,
           data: "Order is alrady placed can't modify",
         };
@@ -343,7 +357,7 @@ const cancelOrder = async (req, res) => {
     const response = await Tokens.find({ symbol: reqData.symbol });
     const TokenData = response[0];
     const lotsize = TokenData.lotsize;
-    const qt = lotsize * reqData.lots;
+    // const qt = lotsize * reqData.lots;
     // console.log(TokenData);
 
     // Function to get the required data for each account
@@ -357,7 +371,8 @@ const cancelOrder = async (req, res) => {
         const AUTH_TOKEN = account.jwtToken;
 
         // find the unique order id by searching in the accounts order array by combinig two things
-        const odr_data = await account.findOne((orders.name = req.data.name));
+        const odr_data = account.orders.find((orders.name = reqData.symbol));
+        // const odr_data = await account.findOne((orders.name = reqData.symbol));
         const uorder_id = odr_data.u_id;
 
         var orderHead = {
@@ -581,4 +596,71 @@ const exitOrder = async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 };
-module.exports = { placeOrder, modifyOrder, cancelOrder, exitOrder };
+
+const orderStatus = async (req, res) => {
+  try {
+    const Account = await Accounts.find({});
+
+    // Function to get the required data for each account
+    const promises = Account.map(async (account) => {
+      try {
+        // Fetching IP and other details
+        const pip = await axios.get("https://api64.ipify.org?format=json");
+        const Pip = pip.data.ip;
+        const localIP = getLocalIP();
+        const macAddress = getMacAddress();
+        const AUTH_TOKEN = account.jwtToken;
+
+      
+        const config = {
+          method: "post",
+          url: "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook",
+          headers: {
+            Authorization: `Bearer ${AUTH_TOKEN}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "X-UserType": "USER",
+            "X-SourceID": "WEB",
+            "X-ClientLocalIP": localIP,
+            "X-ClientPublicIP": Pip,
+            "X-MACAddress": macAddress,
+            "X-PrivateKey": account.apiKey,
+          },
+          data: '',
+        };
+
+        // Execute the API call
+        const response = await axios(config);
+
+        console.log(
+          `Success for clientCode ${account.clientCode}:`,
+          response.data
+        );
+        return {
+          success: true,
+          clientCode: account.clientCode,
+          data: response.data,
+        };
+      } catch (error) {
+        console.error(
+          `Error for clientCode ${account.clientCode}:`,
+          error.message
+        );
+        return {
+          success: false,
+          clientCode: account.clientCode,
+          error: error.message,
+        };
+      }
+    });
+
+    // Wait for all promises to resolve
+    const results = await Promise.all(promises);
+    res.status(200).json({ results });
+  } catch (error) {
+    console.error("Error in orderStatus:", error.message);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
+module.exports = { placeOrder, modifyOrder, cancelOrder, exitOrder, orderStatus };

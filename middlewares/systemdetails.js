@@ -27,4 +27,4 @@ const getLocalIP = () => {
     return '00:00:00:00:00:00';
   };
 
-  module.exports = {getLocalIP, getMacAddress};
+  module.exports = { getLocalIP, getMacAddress };
